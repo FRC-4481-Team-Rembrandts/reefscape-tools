@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<head>
+    <style>
+        html *
+        {
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<h3>Settings</h3>
+Field length: <input type="number" id="field-length" value="17.548"> (meters)
+<br>
+Field width: <input type="number" id="field-width" value="8.052"> (meters)
+<br>
+Select flip type
+<select id="flip-type">
+    <option value="rotate">Rotate around center</option>
+    <option value="mirror">Mirror</option>
+</select>
+
+<h3>Upload Choreo .traj files</h3>
+<input type="file" id="file-selector" multiple>
+<br>
+<br>
+<button id="flip-button">Press this button to flip</button>
+<script>
+    const FIELDLENGHT = document.getElementById('field-length').value + " m";
+    const FIELDWIDTH = document.getElementById('field-width').value + " m";
+    const flipType = document.getElementById('flip-type');
+    const fileSelector = document.getElementById('file-selector');
+    const PI = "pi rad";
+
+    async function mirrorYFiles() {
+        for (const file of fileSelector.files) {
+            const strFile = await readFileAsync(file);
+            const jsonFile = JSON.parse(strFile);
+            
+            jsonFile.snapshot = {"waypoints":[], "constraints":[],"targetDt":0.05};
+            jsonFile.trajectory = {"sampleType":null,"waypoints":[],"samples":[],"splits":[]};
+
+            for (let i = 0; i < jsonFile.params.waypoints.length; i++) {
+                waypoint = jsonFile.params.waypoints[i];
+
+                if (flipType.value == "rotate") {
+                    x = FIELDLENGHT + " -" +  waypoint.x.exp;
+                    y = FIELDWIDTH + " -" + waypoint.y.exp;
+                    heading = PI + " + " + waypoint.heading.exp;
+                } else if (flipType.value == "mirror") {
+                    x = FIELDLENGHT + " -" + waypoint.x.exp;
+                    y = waypoint.y.exp;
+                    heading = PI + " -" + waypoint.heading.exp;
+                }
+                
+                waypoint.x = {exp: x, val: 0};
+                waypoint.y = {exp: y, val: 0};
+                waypoint.heading = {exp: heading, val: 0};
+            }
+
+            try {
+                let strArr = file.name.split('.');
+                strArr[0] += '_FLIPPED'
+                saveNewFile(strArr.join('.'), JSON.stringify(jsonFile));
+            } catch (err) {
+                console.log(err);
+            }
+        }
+    }
+
+    async function saveNewFile(name, data) {
+        const opts = {
+            suggestedName: name,
+        };
+        const handle = await window.showSaveFilePicker(opts);
+        const writable = await handle.createWritable();
+        await writable.write(data);
+        await writable.close();
+    }
+
+    function readFileAsync(file) {
+        return new Promise((resolve, reject) => {
+            let reader = new FileReader();
+
+            reader.onload = () => {
+            resolve(reader.result);
+            };
+
+            reader.onerror = reject;
+
+            reader.readAsText(file);
+        })
+    }
+
+    const convButton = document.getElementById('flip-button');
+    convButton.addEventListener('click', mirrorYFiles, false);
+
+</script>
