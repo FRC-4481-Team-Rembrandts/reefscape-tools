@@ -8,6 +8,8 @@
     </style>
 </head>
 
+<!-- Choreo trajectory flipper -->
+<h2>Choreo trajectory flipper</h2>
 <h3>Settings</h3>
 Field length: <input type="number" id="field-length" value="17.548"> (meters)
 <br>
@@ -20,15 +22,47 @@ Select flip type
 </select>
 
 <h3>Upload Choreo .traj files</h3>
-<input type="file" id="file-selector" multiple>
+<input type="file" id="traj-file-selector" multiple>
 <br>
 <br>
 <button id="flip-button">Press this button to flip</button>
+
+<!-- Scoring position generator -->
+<h2>Scoring position generator</h2>
+<h3>Settings</h3>
+Select scoring orientation
+<select id="scoring-orientation">
+    <option value="front">Front</option>
+    <option value="back">Back</option>
+</select>
+<br>
+<img src="align-layout.png" width=200px>
+<br>
+Green length: <input type="number" id="green-length" value="0.40"> (meters)
+<br>
+Red length: <input type="number" id="red-length" value="0.16449"> (meters)
+
+<h3>Upload your apriltag layout</h3>
+<input type="file" id="apriltag-layout">
+<br>
+<h3>Add the following text to your .chor file in between the curly brackets after "poses"</h3>
+<textarea id="variable-output" readonly="true"></textarea>
+
+<h3>Generate the trajectory file with all variables</h3>
+<button id="generate-traj">Generate .traj</button>
+
 <script>
     const FIELDLENGHT = document.getElementById('field-length').value + " m";
     const FIELDWIDTH = document.getElementById('field-width').value + " m";
+    const DELTAX = document.getElementById('green-length').value;
+    const DELTAY = document.getElementById('red-length').value;
     const flipType = document.getElementById('flip-type');
-    const fileSelector = document.getElementById('file-selector');
+    const fileSelector = document.getElementById('traj-file-selector');
+    const apriltagLayout = document.getElementById('apriltag-layout');
+    const variableOutput = document.getElementById('variable-output');
+    const trajButton = document.getElementById('generate-traj');
+    const convButton = document.getElementById('flip-button');
+    const scoringOrientation = document.getElementById('scoring-orientation');
     const PI = "pi rad";
 
     async function mirrorYFiles() {
@@ -67,9 +101,128 @@ Select flip type
         }
     }
 
+    async function processApriltagLayout() {
+        const strFile = await readFileAsync(apriltagLayout.files[0]);
+        const jsonFile = JSON.parse(strFile);
+        const tagIdObject = jsonFile.tags.reduce((acc,curr)=> (acc[curr.ID]=curr,acc),{});
+
+        let orientationOffset = 0.0;
+        if (scoringOrientation.value == "front") {
+            orientationOffset += Math.PI;
+        }
+
+        function quaternionToYaw(q) {
+            return Math.atan2(2*(q.W * q.Z + q.X * q.Y), 1 - 2*(q.Y * q.Y + q.Z * q.Z));
+        }
+
+        // select the right tags
+        // transform the tags to the scoring positions
+        // only x, y coordinates
+        // use rotation for rotation matrix
+        // x' = [x * cos(theta) - y * sin(theta)]
+        // y' = [x * sin(theta) + y * cos(theta)]
+
+        // RED, BLUE
+        // A t/m L
+
+        let output = {};
+
+        const tagIterationList = [
+            {id: 7, reef:["A","B"], alliance:"RED"},
+            {id: 8, reef:["C","D"], alliance:"RED"},
+            {id: 9, reef:["E","F"], alliance:"RED"},
+            {id: 10, reef:["G","H"], alliance:"RED"},
+            {id: 11, reef:["I","J"], alliance:"RED"},
+            {id: 6, reef:["K","L"], alliance:"RED"},
+            {id: 18, reef:["A","B"], alliance:"BLUE"},
+            {id: 17, reef:["C","D"], alliance:"BLUE"},
+            {id: 22, reef:["E","F"], alliance:"BLUE"},
+            {id: 21, reef:["G","H"], alliance:"BLUE"},
+            {id: 20, reef:["I","J"], alliance:"BLUE"},
+            {id: 19, reef:["K","L"], alliance:"BLUE"}
+        ];
+
+        for (const {id, reef, alliance} of tagIterationList) {
+            const tagInfo = tagIdObject[id];
+            const tagX = tagInfo.pose.translation.x;
+            const tagY = tagInfo.pose.translation.y;
+            const tagYaw = quaternionToYaw(tagInfo.pose.rotation.quaternion);
+            const scoreYaw = tagYaw + orientationOffset;
+
+            for (const idx in reef) {
+                let finalDeltaY = DELTAY;
+                if (idx == 0) {
+                    finalDeltaY *= -1;
+                }
+                const scoringX = tagX + DELTAX * Math.cos(tagYaw) - finalDeltaY * Math.sin(tagYaw);
+                const scoringY = tagY + DELTAX * Math.sin(tagYaw) + finalDeltaY * Math.cos(tagYaw);
+                
+                output[alliance + "_" + reef[idx]] = {
+                    x: {exp: scoringX + " m", val: scoringX}, 
+                    y: {exp: scoringY + " m", val: scoringY}, 
+                    heading: {exp: scoreYaw + " rad", val: scoreYaw}
+                };
+            }
+        }
+        variableOutput.value = JSON.stringify(output).slice(1,-1);
+    }
+
+    apriltagLayout.addEventListener('input', processApriltagLayout, false);
+
+    async function generateTrajectory() {
+        for (const alliance of ["RED", "BLUE"]) {
+            jsonFile =  {
+                "name":"scoring positions",
+                "version":1,
+                "snapshot":{
+                    "waypoints":[],
+                    "constraints":[],
+                    "targetDt":0.05
+                },
+                "params":{
+                    "waypoints":[],
+                    "constraints":[],
+                    "targetDt":{
+                        "exp":"0.05 s",
+                        "val":0.05
+                    }
+                },
+                "trajectory":{
+                    "sampleType":null,
+                    "waypoints":[],
+                    "samples":[],
+                    "splits":[]
+                },
+                "events":[]
+            }
+
+            for (const letter of "ABCDEFGHIJKL") {
+                let name = alliance + "_" + letter;
+                jsonFile.params.waypoints.push({
+                    "x":{"exp": name + ".x", "val":0.0},
+                    "y":{"exp": name + ".y","val":0.0},
+                    "heading":{"exp": name + ".heading", "val":0.0},
+                    "intervals":40,
+                    "split":true,
+                    "fixTranslation":true,
+                    "fixHeading":true,
+                    "overrideIntervals":false
+                });
+            }
+            
+            try {
+                await saveNewFile("scoring positions " + alliance + ".traj", JSON.stringify(jsonFile));
+            } catch (err) {
+                console.log(err);
+            }
+        }
+    }
+
+    trajButton.addEventListener('click', generateTrajectory, false);
+
     async function saveNewFile(name, data) {
         const opts = {
-            suggestedName: name,
+            suggestedName: name
         };
         const handle = await window.showSaveFilePicker(opts);
         const writable = await handle.createWritable();
@@ -91,7 +244,6 @@ Select flip type
         })
     }
 
-    const convButton = document.getElementById('flip-button');
     convButton.addEventListener('click', mirrorYFiles, false);
 
 </script>
