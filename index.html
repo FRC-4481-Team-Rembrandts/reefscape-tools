@@ -27,13 +27,17 @@ Select flip type
 <br>
 <button id="flip-button">Press this button to flip</button>
 
+<br>
+<br>
+<hr>
+
 <!-- Scoring position generator -->
 <h2>Scoring position generator</h2>
 <h3>Settings</h3>
-Select scoring orientation
-<select id="scoring-orientation">
-    <option value="front">Front</option>
-    <option value="back">Back</option>
+Heading when scoring with respect to the reef (front or back scoring)
+<select id="scoring-heading">
+    <option value="front">0 degrees</option>
+    <option value="back">180 degrees</option>
 </select>
 <br>
 <img src="align-layout.png" width=200px>
@@ -45,11 +49,12 @@ Red length: <input type="number" id="red-length" value="0.16449"> (meters)
 <h3>Upload your apriltag layout</h3>
 <input type="file" id="apriltag-layout">
 <br>
-<h3>Add the following text to your .chor file in between the curly brackets after "poses"</h3>
+<h3>Copy and paste the following text to your .chor file in between the curly brackets after "poses"</h3>
+<p>This will add the scoring positions as variables, and is needed for the generated trajectories to work</p>
 <textarea id="variable-output" readonly="true"></textarea>
 
-<h3>Generate the trajectory file with all variables</h3>
-<button id="generate-traj">Generate .traj</button>
+<h3>Generate the trajectory file for both alliances using the variables</h3>
+<button id="generate-traj">Generate .traj files</button>
 
 <script>
     const FIELDLENGHT = document.getElementById('field-length').value + " m";
@@ -62,7 +67,7 @@ Red length: <input type="number" id="red-length" value="0.16449"> (meters)
     const variableOutput = document.getElementById('variable-output');
     const trajButton = document.getElementById('generate-traj');
     const convButton = document.getElementById('flip-button');
-    const scoringOrientation = document.getElementById('scoring-orientation');
+    const scoringHeading = document.getElementById('scoring-heading');
     const PI = "pi rad";
 
     async function mirrorYFiles() {
@@ -106,9 +111,9 @@ Red length: <input type="number" id="red-length" value="0.16449"> (meters)
         const jsonFile = JSON.parse(strFile);
         const tagIdObject = jsonFile.tags.reduce((acc,curr)=> (acc[curr.ID]=curr,acc),{});
 
-        let orientationOffset = 0.0;
-        if (scoringOrientation.value == "front") {
-            orientationOffset += Math.PI;
+        let headingOffset = 0.0;
+        if (scoringHeading.value == "front") {
+            headingOffset += Math.PI;
         }
 
         function quaternionToYaw(q) {
@@ -147,7 +152,7 @@ Red length: <input type="number" id="red-length" value="0.16449"> (meters)
             const tagX = tagInfo.pose.translation.x;
             const tagY = tagInfo.pose.translation.y;
             const tagYaw = quaternionToYaw(tagInfo.pose.rotation.quaternion);
-            const scoreYaw = tagYaw + orientationOffset;
+            const scoreYaw = tagYaw + headingOffset;
 
             for (const idx in reef) {
                 let finalDeltaY = DELTAY;
