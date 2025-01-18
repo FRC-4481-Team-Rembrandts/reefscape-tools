@@ -31,16 +31,16 @@ Select flip type
 <br>
 <hr>
 
-<!-- Scoring position generator -->
-<h2>Scoring position generator</h2>
-<h3>Settings</h3>
+<!-- scoring and intaking position generator -->
+<h2>Reef scoring & Coral intaking position generator</h2>
+<h3>Scoring Settings</h3>
 Heading when scoring with respect to the reef (front or back scoring)
 <select id="scoring-heading">
     <option value="front">0 degrees</option>
     <option value="back">180 degrees</option>
 </select>
 <br>
-<img src="align-layout.png" width=200px>
+<img src="reef-align-layout.png" width=200px>
 <br>
 Green length: <input type="number" id="green-length" value="0.40"> (meters)
 <br>
@@ -54,25 +54,40 @@ Red reef offset delta X (field relative): <input type="number" id="red-offset-x"
 <br>
 Red reef offset delta Y (field relative): <input type="number" id="red-offset-y" value="0.0"> (meters)
 
+<h3>Intaking Settings</h3>
+Heading when intaking with respect to the coral station (back or front intaking)
+<select id="intake-heading">
+    <option value="back">180 degrees</option>
+    <option value="front">0 degrees</option>
+</select>
+<br>
+<img src="coral-station-align-layout.png" width=200px>
+<br>
+Orange length: <input type="number" id="orange-length" value="0.40"> (meters)
+<br>
+Blue length: <input type="number" id="blue-length" value="0.610"> (meters)
+
 <h3>Upload your apriltag layout</h3>
 <input type="file" id="apriltag-layout">
 <br>
 <h3>Copy and paste the following text to your .chor file in between the curly brackets after "poses"</h3>
-<p>This will add the scoring positions as variables, and is needed for the generated trajectories to work</p>
+<p>This will add the positions as variables, and is needed for the generated trajectories to work</p>
 <textarea id="variable-output" readonly="true"></textarea>
 
 <h3>Generate the trajectory file for both alliances using the variables</h3>
 <button id="generate-traj">Generate .traj files</button>
 
 <script>
-    const FIELDLENGTH = document.getElementById('field-length').value + " m";
-    const FIELDWIDTH = document.getElementById('field-width').value + " m";
-    const DELTAX = document.getElementById('green-length').value;
-    const DELTAY = document.getElementById('red-length').value;
-    const BLUEOFFSETX = document.getElementById('blue-offset-x').value;
-    const BLUEOFFSETY = document.getElementById('blue-offset-y').value;
-    const REDOFFSETX = document.getElementById('red-offset-x').value;
-    const REDOFFSETY = document.getElementById('red-offset-y').value;
+    const FIELDLENGTH = document.getElementById('field-length');
+    const FIELDWIDTH = document.getElementById('field-width');
+    const GREEN_DELTAX = document.getElementById('green-length');
+    const RED_DELTAY = document.getElementById('red-length');
+    const BLUEOFFSETX = document.getElementById('blue-offset-x');
+    const BLUEOFFSETY = document.getElementById('blue-offset-y');
+    const REDOFFSETX = document.getElementById('red-offset-x');
+    const REDOFFSETY = document.getElementById('red-offset-y');
+    const ORANGE_DELTAX = document.getElementById('orange-length');
+    const BLUE_DELTAY = document.getElementById('blue-length');
     const flipType = document.getElementById('flip-type');
     const fileSelector = document.getElementById('traj-file-selector');
     const apriltagLayout = document.getElementById('apriltag-layout');
@@ -80,6 +95,7 @@ Red reef offset delta Y (field relative): <input type="number" id="red-offset-y"
     const trajButton = document.getElementById('generate-traj');
     const convButton = document.getElementById('flip-button');
     const scoringHeading = document.getElementById('scoring-heading');
+    const intakeHeading = document.getElementById('intake-heading');
     const PI = "pi rad";
 
     async function mirrorYFiles() {
@@ -94,11 +110,11 @@ Red reef offset delta Y (field relative): <input type="number" id="red-offset-y"
                 waypoint = jsonFile.params.waypoints[i];
 
                 if (flipType.value == "rotate") {
-                    x = FIELDLENGTH + " -" +  waypoint.x.exp;
-                    y = FIELDWIDTH + " -" + waypoint.y.exp;
+                    x = FIELDLENGTH + " m -" +  waypoint.x.exp;
+                    y = FIELDWIDTH + " m -" + waypoint.y.exp;
                     heading = PI + " + " + waypoint.heading.exp;
                 } else if (flipType.value == "mirror") {
-                    x = FIELDLENGTH + " -" + waypoint.x.exp;
+                    x = FIELDLENGTH + " m -" + waypoint.x.exp;
                     y = waypoint.y.exp;
                     heading = PI + " -" + waypoint.heading.exp;
                 }
@@ -118,15 +134,30 @@ Red reef offset delta Y (field relative): <input type="number" id="red-offset-y"
         }
     }
 
+    const tagIterationList = [
+        {id: 7, names:["A","B"], alliance:"RED", type:"REEF"},
+        {id: 8, names:["C","D"], alliance:"RED", type:"REEF"},
+        {id: 9, names:["E","F"], alliance:"RED", type:"REEF"},
+        {id: 10, names:["G","H"], alliance:"RED", type:"REEF"},
+        {id: 11, names:["I","J"], alliance:"RED", type:"REEF"},
+        {id: 6, names:["K","L"], alliance:"RED", type:"REEF"},
+        {id: 18, names:["A","B"], alliance:"BLUE", type:"REEF"},
+        {id: 17, names:["C","D"], alliance:"BLUE", type:"REEF"},
+        {id: 22, names:["E","F"], alliance:"BLUE", type:"REEF"},
+        {id: 21, names:["G","H"], alliance:"BLUE", type:"REEF"},
+        {id: 20, names:["I","J"], alliance:"BLUE", type:"REEF"},
+        {id: 19, names:["K","L"], alliance:"BLUE", type:"REEF"},
+
+        {id: 13, names:["TOP_LEFT","TOP_RIGHT"], alliance:"BLUE", type:"CORAL_STATION"},
+        {id: 12, names:["BOTTOM_RIGHT","BOTTOM_LEFT"], alliance:"BLUE", type:"CORAL_STATION"},
+        {id: 2, names:["TOP_LEFT","TOP_RIGHT"], alliance:"RED", type:"CORAL_STATION"},
+        {id: 1, names:["BOTTOM_RIGHT","BOTTOM_LEFT"], alliance:"RED", type:"CORAL_STATION"},
+    ];
+
     async function processApriltagLayout() {
         const strFile = await readFileAsync(apriltagLayout.files[0]);
         const jsonFile = JSON.parse(strFile);
         const tagIdObject = jsonFile.tags.reduce((acc,curr)=> (acc[curr.ID]=curr,acc),{});
-
-        let headingOffset = 0.0;
-        if (scoringHeading.value == "front") {
-            headingOffset += Math.PI;
-        }
 
         function quaternionToYaw(q) {
             return Math.atan2(2*(q.W * q.Z + q.X * q.Y), 1 - 2*(q.Y * q.Y + q.Z * q.Z));
@@ -144,85 +175,85 @@ Red reef offset delta Y (field relative): <input type="number" id="red-offset-y"
 
         let output = {};
 
-        const tagIterationList = [
-            {id: 7, reef:["A","B"], alliance:"RED"},
-            {id: 8, reef:["C","D"], alliance:"RED"},
-            {id: 9, reef:["E","F"], alliance:"RED"},
-            {id: 10, reef:["G","H"], alliance:"RED"},
-            {id: 11, reef:["I","J"], alliance:"RED"},
-            {id: 6, reef:["K","L"], alliance:"RED"},
-            {id: 18, reef:["A","B"], alliance:"BLUE"},
-            {id: 17, reef:["C","D"], alliance:"BLUE"},
-            {id: 22, reef:["E","F"], alliance:"BLUE"},
-            {id: 21, reef:["G","H"], alliance:"BLUE"},
-            {id: 20, reef:["I","J"], alliance:"BLUE"},
-            {id: 19, reef:["K","L"], alliance:"BLUE"}
-        ];
-
-        for (const {id, reef, alliance} of tagIterationList) {
+        for (const {id, names, alliance, type} of tagIterationList) {
             const tagInfo = tagIdObject[id];
             const tagX = tagInfo.pose.translation.x;
             const tagY = tagInfo.pose.translation.y;
             const tagYaw = quaternionToYaw(tagInfo.pose.rotation.quaternion);
-            const scoreYaw = tagYaw + headingOffset;
+                    
+            for (const idx in names) {
+                let scoringX = Number(tagX);
+                let scoringY = Number(tagY);
+                let headingOffset;
+                let finalDeltaX;
+                let finalDeltaY;
 
-            for (const idx in reef) {
-                let finalDeltaY = DELTAY;
+                if (type == "REEF") {
+                    finalDeltaX = Number(GREEN_DELTAX.value);
+                    finalDeltaY = Number(RED_DELTAY.value);
+                    if (alliance == "RED") {
+                        scoringX += Number(REDOFFSETX.value);
+                        scoringY += Number(REDOFFSETY.value);
+                    } else {
+                        scoringX += Number(BLUEOFFSETX.value);
+                        scoringY += Number(BLUEOFFSETY.value);
+                    }
+                    headingOffset = scoringHeading.value == "front" ? Math.PI : 0.0;
+                } else if (type == "CORAL_STATION") {
+                    finalDeltaX = Number(ORANGE_DELTAX.value);
+                    finalDeltaY = Number(BLUE_DELTAY.value);
+                    headingOffset = intakeHeading.value == "front" ? Math.PI : 0.0;
+                }
+
                 if (idx == 0) {
                     finalDeltaY *= -1;
                 }
-                const scoringX = tagX + DELTAX * Math.cos(tagYaw) - finalDeltaY * Math.sin(tagYaw);
-                const scoringY = tagY + DELTAX * Math.sin(tagYaw) + finalDeltaY * Math.cos(tagYaw);
-                
-                if (alliance == "RED") {
-                    scoringX += REDOFFSETX;
-                    scoringX += REDOFFSETY;
-                } else {
-                    scoringX += BLUEOFFSETX;
-                    scoringX += BLUEOFFSETY;
-                }
 
-                output[alliance + "_" + reef[idx]] = {
+                scoringX += finalDeltaX * Math.cos(tagYaw) - finalDeltaY * Math.sin(tagYaw);
+                scoringY += finalDeltaX * Math.sin(tagYaw) + finalDeltaY * Math.cos(tagYaw);
+
+                output[type + "_" + alliance + "_" + names[idx]] = {
                     x: {exp: scoringX + " m", val: scoringX}, 
                     y: {exp: scoringY + " m", val: scoringY}, 
-                    heading: {exp: scoreYaw + " rad", val: scoreYaw}
+                    heading: {exp: tagYaw + headingOffset + " rad", val: tagYaw + headingOffset}
                 };
             }
         }
+
         variableOutput.value = JSON.stringify(output).slice(1,-1);
     }
 
     apriltagLayout.addEventListener('input', processApriltagLayout, false);
 
     async function generateTrajectory() {
-        for (const alliance of ["RED", "BLUE"]) {
-            jsonFile =  {
-                "name":"scoring positions",
-                "version":1,
-                "snapshot":{
-                    "waypoints":[],
-                    "constraints":[],
-                    "targetDt":0.05
-                },
-                "params":{
-                    "waypoints":[],
-                    "constraints":[],
-                    "targetDt":{
-                        "exp":"0.05 s",
-                        "val":0.05
-                    }
-                },
-                "trajectory":{
-                    "sampleType":null,
-                    "waypoints":[],
-                    "samples":[],
-                    "splits":[]
-                },
-                "events":[]
-            }
+        jsonFile =  {
+            "name":"scoring positions",
+            "version":1,
+            "snapshot":{
+                "waypoints":[],
+                "constraints":[],
+                "targetDt":0.05
+            },
+            "params":{
+                "waypoints":[],
+                "constraints":[],
+                "targetDt":{
+                    "exp":"0.05 s",
+                    "val":0.05
+                }
+            },
+            "trajectory":{
+                "sampleType":null,
+                "waypoints":[],
+                "samples":[],
+                "splits":[]
+            },
+            "events":[]
+        }
 
-            for (const letter of "ABCDEFGHIJKL") {
-                let name = alliance + "_" + letter;
+        for (const {id, names, alliance, type} of tagIterationList) {
+            for (const idx in names) {
+                let name = type + "_" + alliance + "_" + names[idx];
                 jsonFile.params.waypoints.push({
                     "x":{"exp": name + ".x", "val":0.0},
                     "y":{"exp": name + ".y","val":0.0},
@@ -234,12 +265,12 @@ Red reef offset delta Y (field relative): <input type="number" id="red-offset-y"
                     "overrideIntervals":false
                 });
             }
-            
-            try {
-                await saveNewFile("scoring positions " + alliance + ".traj", JSON.stringify(jsonFile));
-            } catch (err) {
-                console.log(err);
-            }
+        }
+        
+        try {
+            await saveNewFile("variable positions.traj", JSON.stringify(jsonFile));
+        } catch (err) {
+            console.log(err);
         }
     }
 
