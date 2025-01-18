@@ -71,11 +71,11 @@ Blue length: <input type="number" id="blue-length" value="0.610"> (meters)
 <input type="file" id="apriltag-layout">
 <br>
 <h3>Copy and paste the following text to your .chor file in between the curly brackets after "poses"</h3>
-<p>This will add the positions as variables, and is needed for the generated trajectories to work</p>
+<p>This will add the positions as variables, and is needed for the generated trajectory to work</p>
 <textarea id="variable-output" readonly="true"></textarea>
 
-<h3>Generate the trajectory file for both alliances using the variables</h3>
-<button id="generate-traj">Generate .traj files</button>
+<h3>Generate the trajectory file with all variables</h3>
+<button id="generate-traj">Generate .traj file</button>
 
 <script>
     const FIELDLENGTH = document.getElementById('field-length');
