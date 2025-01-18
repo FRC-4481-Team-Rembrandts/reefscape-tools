@@ -45,6 +45,14 @@ Heading when scoring with respect to the reef (front or back scoring)
 Green length: <input type="number" id="green-length" value="0.40"> (meters)
 <br>
 Red length: <input type="number" id="red-length" value="0.16449"> (meters)
+<br>
+Blue reef offset delta X (field relative): <input type="number" id="blue-offset-x" value="0.0"> (meters)
+<br>
+Blue reef offset delta Y (field relative): <input type="number" id="blue-offset-y" value="0.0"> (meters)
+<br>
+Red reef offset delta X (field relative): <input type="number" id="red-offset-x" value="0.0"> (meters)
+<br>
+Red reef offset delta Y (field relative): <input type="number" id="red-offset-y" value="0.0"> (meters)
 
 <h3>Upload your apriltag layout</h3>
 <input type="file" id="apriltag-layout">
@@ -61,6 +69,10 @@ Red length: <input type="number" id="red-length" value="0.16449"> (meters)
     const FIELDWIDTH = document.getElementById('field-width').value + " m";
     const DELTAX = document.getElementById('green-length').value;
     const DELTAY = document.getElementById('red-length').value;
+    const BLUEOFFSETX = document.getElementById('blue-offset-x').value;
+    const BLUEOFFSETY = document.getElementById('blue-offset-y').value;
+    const REDOFFSETX = document.getElementById('red-offset-x').value;
+    const REDOFFSETY = document.getElementById('red-offset-y').value;
     const flipType = document.getElementById('flip-type');
     const fileSelector = document.getElementById('traj-file-selector');
     const apriltagLayout = document.getElementById('apriltag-layout');
@@ -162,6 +174,14 @@ Red length: <input type="number" id="red-length" value="0.16449"> (meters)
                 const scoringX = tagX + DELTAX * Math.cos(tagYaw) - finalDeltaY * Math.sin(tagYaw);
                 const scoringY = tagY + DELTAX * Math.sin(tagYaw) + finalDeltaY * Math.cos(tagYaw);
                 
+                if (alliance == "RED") {
+                    scoringX += REDOFFSETX;
+                    scoringX += REDOFFSETY;
+                } else {
+                    scoringX += BLUEOFFSETX;
+                    scoringX += BLUEOFFSETY;
+                }
+
                 output[alliance + "_" + reef[idx]] = {
                     x: {exp: scoringX + " m", val: scoringX}, 
                     y: {exp: scoringY + " m", val: scoringY}, 
