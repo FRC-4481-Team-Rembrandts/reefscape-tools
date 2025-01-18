@@ -57,7 +57,7 @@ Red length: <input type="number" id="red-length" value="0.16449"> (meters)
 <button id="generate-traj">Generate .traj files</button>
 
 <script>
-    const FIELDLENGHT = document.getElementById('field-length').value + " m";
+    const FIELDLENGTH = document.getElementById('field-length').value + " m";
     const FIELDWIDTH = document.getElementById('field-width').value + " m";
     const DELTAX = document.getElementById('green-length').value;
     const DELTAY = document.getElementById('red-length').value;
@@ -82,11 +82,11 @@ Red length: <input type="number" id="red-length" value="0.16449"> (meters)
                 waypoint = jsonFile.params.waypoints[i];
 
                 if (flipType.value == "rotate") {
-                    x = FIELDLENGHT + " -" +  waypoint.x.exp;
+                    x = FIELDLENGTH + " -" +  waypoint.x.exp;
                     y = FIELDWIDTH + " -" + waypoint.y.exp;
                     heading = PI + " + " + waypoint.heading.exp;
                 } else if (flipType.value == "mirror") {
-                    x = FIELDLENGHT + " -" + waypoint.x.exp;
+                    x = FIELDLENGTH + " -" + waypoint.x.exp;
                     y = waypoint.y.exp;
                     heading = PI + " -" + waypoint.heading.exp;
                 }
