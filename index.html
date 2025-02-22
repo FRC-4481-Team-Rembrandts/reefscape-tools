@@ -102,6 +102,8 @@ Blue length: <input type="number" id="blue-length" value="0.610"> (meters)
         for (const file of fileSelector.files) {
             const strFile = await readFileAsync(file);
             const jsonFile = JSON.parse(strFile);
+
+            console.log(jsonFile);
             
             jsonFile.snapshot = {"waypoints":[], "constraints":[],"targetDt":0.05};
             jsonFile.trajectory = {"sampleType":null,"waypoints":[],"samples":[],"splits":[]};
@@ -110,11 +112,11 @@ Blue length: <input type="number" id="blue-length" value="0.610"> (meters)
                 waypoint = jsonFile.params.waypoints[i];
 
                 if (flipType.value == "rotate") {
-                    x = FIELDLENGTH + " m -" +  waypoint.x.exp;
-                    y = FIELDWIDTH + " m -" + waypoint.y.exp;
+                    x = FIELDLENGTH.value + " m -" +  waypoint.x.exp;
+                    y = FIELDWIDTH.value + " m -" + waypoint.y.exp;
                     heading = PI + " + " + waypoint.heading.exp;
                 } else if (flipType.value == "mirror") {
-                    x = FIELDLENGTH + " m -" + waypoint.x.exp;
+                    x = FIELDLENGTH.value + " m -" + waypoint.x.exp;
                     y = waypoint.y.exp;
                     heading = PI + " -" + waypoint.heading.exp;
                 }
