@@ -78,8 +78,8 @@ Blue length: <input type="number" id="blue-length" value="0.610"> (meters)
 <button id="generate-traj">Generate .traj file</button>
 
 <script>
-    const FIELDLENGTH = document.getElementById('field-length');
-    const FIELDWIDTH = document.getElementById('field-width');
+    const FIELDLENGTH = Number(document.getElementById('field-length').value);
+    const FIELDWIDTH = Number(document.getElementById('field-width').value);
     const GREEN_DELTAX = document.getElementById('green-length');
     const RED_DELTAY = document.getElementById('red-length');
     const BLUEOFFSETX = document.getElementById('blue-offset-x');
@@ -96,7 +96,6 @@ Blue length: <input type="number" id="blue-length" value="0.610"> (meters)
     const convButton = document.getElementById('flip-button');
     const scoringHeading = document.getElementById('scoring-heading');
     const intakeHeading = document.getElementById('intake-heading');
-    const PI = "pi rad";
 
     async function mirrorYFiles() {
         for (const file of fileSelector.files) {
@@ -109,19 +108,22 @@ Blue length: <input type="number" id="blue-length" value="0.610"> (meters)
             for (let i = 0; i < jsonFile.params.waypoints.length; i++) {
                 waypoint = jsonFile.params.waypoints[i];
 
+                console.log(typeof(waypoint))
+                console.log(typeof(waypoint.y.val))
+
                 if (flipType.value == "rotate") {
-                    x = FIELDLENGTH + " m -" +  waypoint.x.exp;
-                    y = FIELDWIDTH + " m -" + waypoint.y.exp;
-                    heading = PI + " + " + waypoint.heading.exp;
+                    x = FIELDLENGTH - waypoint.x.val;
+                    y = FIELDWIDTH - waypoint.y.val;
+                    heading = Math.PI + waypoint.heading.val;
                 } else if (flipType.value == "mirror") {
-                    x = FIELDLENGTH + " m -" + waypoint.x.exp;
-                    y = waypoint.y.exp;
-                    heading = PI + " -" + waypoint.heading.exp;
+                    x = FIELDLENGTH - waypoint.x.val;
+                    y = waypoint.y.val;
+                    heading = Math.PI - waypoint.heading.val;
                 }
                 
-                waypoint.x = {exp: x, val: 0};
-                waypoint.y = {exp: y, val: 0};
-                waypoint.heading = {exp: heading, val: 0};
+                waypoint.x = {exp: String(x) + " m", val: x};
+                waypoint.y = {exp: String(y) + " m", val: y};
+                waypoint.heading = {exp: String(heading) + " rad", val: heading};
             }
 
             try {
