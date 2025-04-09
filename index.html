@@ -108,9 +108,6 @@ Blue length: <input type="number" id="blue-length" value="0.610"> (meters)
             for (let i = 0; i < jsonFile.params.waypoints.length; i++) {
                 waypoint = jsonFile.params.waypoints[i];
 
-                console.log(typeof(waypoint))
-                console.log(typeof(waypoint.y.val))
-
                 if (flipType.value == "rotate") {
                     x = FIELDLENGTH - waypoint.x.val;
                     y = FIELDWIDTH - waypoint.y.val;
